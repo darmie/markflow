@@ -137,13 +137,15 @@
     overflow-x: hidden;
     padding: 8px 0;
     z-index: 50;
+    display: flex;
+    flex-direction: column;
     transition: transform 300ms ease;
   }
   .sidebar::-webkit-scrollbar { width: 4px; }
   .sidebar::-webkit-scrollbar-track { background: transparent; }
   .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
-  .step-list { list-style: none; padding: 0; margin: 0; }
+  .step-list { list-style: none; padding: 0; margin: 0; flex: 1; overflow-y: auto; }
   .step-item {
     display: flex;
     align-items: center;
@@ -601,6 +603,22 @@
   .step-sub-item.depth-4 {
     padding-left: 68px;
   }
+  .sidebar-footer {
+    margin-top: auto;
+    padding: 16px;
+    border-top: 1px solid var(--border);
+    text-align: center;
+  }
+  .sidebar-footer a {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.7rem;
+    letter-spacing: 0.03em;
+    transition: var(--transition);
+  }
+  .sidebar-footer a:hover {
+    color: var(--accent);
+  }
 
   /* ─── FOLDER/BRANCH DROPDOWN (top of sidebar) ─── */
   .folder-dropdown-wrap, .branch-dropdown-wrap {
@@ -663,6 +681,9 @@
       <select class="folder-dropdown" id="folderDropdown" onchange="onFolderChange(this.value)"></select>
     </div>
     <ul class="step-list" id="stepList"></ul>
+    <div class="sidebar-footer">
+      <a href="https://github.com/darmie/markflow" target="_blank" rel="noopener">Powered by Markflow</a>
+    </div>
   </nav>
   <main class="main-content" id="mainContent">
     <div class="content-scroll" id="contentArea">
@@ -756,7 +777,7 @@ const state = {
       // Client-side fetch mode
       fetchTree();
     }
-    if (state.branchSwitcher && !__MARKFLOW_CONTENT__) {
+    if (state.branchSwitcher) {
       fetchBranches();
     }
   } else {

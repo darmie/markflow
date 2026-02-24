@@ -97,7 +97,7 @@ MARKFLOW_REPO_ROOT=
 MARKFLOW_BRANCH_SWITCHER=true
 
 # Branding
-MARKFLOW_BRAND_NAME=My Docs
+MARKFLOW_BRAND_NAME=
 MARKFLOW_BRAND_LOGO=
 
 # Theme Colors
@@ -333,9 +333,9 @@ cmd_build() {
   local brand_logo
   brand_logo="$(build_brand_logo)"
 
-  local brand_name="${MARKFLOW_BRAND_NAME:-Markflow}"
+  local brand_name="${MARKFLOW_BRAND_NAME:-${MARKFLOW_REPO_NAME:-Markflow}}"
 
-  local page_title="${MARKFLOW_BRAND_NAME:-Markflow}"
+  local page_title="${MARKFLOW_BRAND_NAME:-${MARKFLOW_REPO_NAME:-Markflow}}"
 
   # Pre-bake content if requested
   local content_js="null"
