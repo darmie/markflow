@@ -121,6 +121,11 @@ MARKFLOW_SOCIAL_LINKEDIN=
 MARKFLOW_SOCIAL_YOUTUBE=
 MARKFLOW_SOCIAL_WEBSITE=
 
+# SEO & Open Graph (leave blank to omit)
+MARKFLOW_DESCRIPTION=
+MARKFLOW_URL=
+MARKFLOW_OG_IMAGE=
+
 # Giscus Comments (leave blank to disable)
 MARKFLOW_GISCUS_REPO=
 MARKFLOW_GISCUS_CATEGORY=General
@@ -199,6 +204,33 @@ build_brand_logo() {
   else
     echo "$ICON_DEFAULT_LOGO"
   fi
+}
+
+# ─── BUILD SEO META ───
+build_seo_meta() {
+  local title="${MARKFLOW_BRAND_NAME:-${MARKFLOW_REPO_NAME:-Markflow}}"
+  local desc="${MARKFLOW_DESCRIPTION:-}"
+  local url="${MARKFLOW_URL:-}"
+  local image="${MARKFLOW_OG_IMAGE:-}"
+  local meta=""
+
+  # Basic meta
+  [[ -n "$desc" ]] && meta="${meta}<meta name=\"description\" content=\"${desc}\">"
+
+  # Open Graph
+  meta="${meta}<meta property=\"og:type\" content=\"website\">"
+  meta="${meta}<meta property=\"og:title\" content=\"${title}\">"
+  [[ -n "$desc" ]] && meta="${meta}<meta property=\"og:description\" content=\"${desc}\">"
+  [[ -n "$url" ]] && meta="${meta}<meta property=\"og:url\" content=\"${url}\">"
+  [[ -n "$image" ]] && meta="${meta}<meta property=\"og:image\" content=\"${image}\">"
+
+  # Twitter Card
+  meta="${meta}<meta name=\"twitter:card\" content=\"summary_large_image\">"
+  meta="${meta}<meta name=\"twitter:title\" content=\"${title}\">"
+  [[ -n "$desc" ]] && meta="${meta}<meta name=\"twitter:description\" content=\"${desc}\">"
+  [[ -n "$image" ]] && meta="${meta}<meta name=\"twitter:image\" content=\"${image}\">"
+
+  echo "$meta"
 }
 
 # ─── PRE-BAKE: LOCAL SOURCE ───
@@ -337,6 +369,9 @@ cmd_build() {
 
   local page_title="${MARKFLOW_BRAND_NAME:-${MARKFLOW_REPO_NAME:-Markflow}}"
 
+  local seo_meta
+  seo_meta="$(build_seo_meta)"
+
   # Pre-bake content if requested
   local content_js="null"
   if [[ "$prebake" == true ]]; then
@@ -363,6 +398,15 @@ cmd_build() {
 
   # Page title
   sed -i.bak "s|<!-- __PAGE_TITLE__ -->|${page_title}|g" "$tmpfile"
+
+  # SEO meta tags
+  if [[ -n "$seo_meta" ]]; then
+    local escaped_seo
+    escaped_seo="$(echo "$seo_meta" | sed 's/[&/\]/\\&/g' | tr -d '\n')"
+    sed -i.bak "s|<!-- __SEO_META__ -->|${escaped_seo}|g" "$tmpfile"
+  else
+    sed -i.bak "s|<!-- __SEO_META__ -->||g" "$tmpfile"
+  fi
 
   # Theme override (insert before the default <style> block)
   if [[ -n "$theme_css" ]]; then

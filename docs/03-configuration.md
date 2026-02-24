@@ -121,3 +121,21 @@ MARKFLOW_SOCIAL_WEBSITE=https://yoursite.com
 ```
 
 All six are optional. Only icons with a URL will appear.
+
+## SEO and Open Graph
+
+Add metadata for search engines and social media link previews.
+
+```env
+MARKFLOW_DESCRIPTION=A short description of your docs site
+MARKFLOW_URL=https://your-org.github.io/your-repo/
+MARKFLOW_OG_IMAGE=https://your-org.github.io/your-repo/og-image.png
+```
+
+| Variable | Purpose |
+|----------|---------|
+| `MARKFLOW_DESCRIPTION` | Meta description and OG/Twitter description |
+| `MARKFLOW_URL` | Canonical URL for `og:url` |
+| `MARKFLOW_OG_IMAGE` | Image URL for `og:image` and `twitter:image` |
+
+All three are optional. The page title (`og:title`, `twitter:title`) is automatically set from `MARKFLOW_BRAND_NAME` or the repo name. Twitter cards use `summary_large_image` format.
