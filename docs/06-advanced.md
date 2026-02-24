@@ -75,6 +75,15 @@ MARKFLOW_GISCUS_REPO=your-org/your-repo
 MARKFLOW_GISCUS_CATEGORY=Docs Comments
 ```
 
+Giscus requires a **repo ID** and **category ID** (GraphQL node IDs). Markflow auto-fetches these during build if a `GITHUB_TOKEN` is available. To skip the lookup, set them explicitly:
+
+```env
+MARKFLOW_GISCUS_REPO_ID=R_kgDO...
+MARKFLOW_GISCUS_CATEGORY_ID=DIC_kwDO...
+```
+
+You can find these values at [giscus.app](https://giscus.app) by entering your repo details.
+
 Comments will appear at the bottom of every page. Each page gets its own discussion thread based on the page path.
 
 Leave `MARKFLOW_GISCUS_REPO` blank to disable comments entirely.

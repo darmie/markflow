@@ -130,13 +130,56 @@ MARKFLOW_URL=
 MARKFLOW_OG_IMAGE=
 
 # Giscus Comments (leave blank to disable)
+# Get repo ID and category ID from https://giscus.app
 MARKFLOW_GISCUS_REPO=
+MARKFLOW_GISCUS_REPO_ID=
 MARKFLOW_GISCUS_CATEGORY=General
+MARKFLOW_GISCUS_CATEGORY_ID=
 
 # GitHub API token for pre-baking (optional)
 # GITHUB_TOKEN=
 ENVFILE
   echo "Created .env — edit it with your repo details."
+}
+
+# ─── FETCH GISCUS IDS ───
+# Auto-fetches repo ID and category ID from GitHub GraphQL API
+fetch_giscus_ids() {
+  local repo="$1"
+  local category="$2"
+  local token="${GITHUB_TOKEN:-}"
+
+  local auth_args=()
+  if [[ -n "$token" ]]; then
+    auth_args=(-H "Authorization: bearer ${token}")
+  fi
+
+  local query='{"query":"{ repository(owner: \"'${repo%%/*}'\", name: \"'${repo#*/}'\") { id discussionCategories(first: 25) { nodes { id name } } } }"}'
+
+  local response
+  response="$(curl -sS "${auth_args[@]}" -H "Content-Type: application/json" -d "$query" https://api.github.com/graphql 2>/dev/null)" || return
+
+  # Extract repo ID
+  local repo_id
+  repo_id="$(echo "$response" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['data']['repository']['id'])" 2>/dev/null)" || return
+  export MARKFLOW_GISCUS_REPO_ID="$repo_id"
+  echo "  Fetched repo ID: ${repo_id}" >&2
+
+  # Extract category ID
+  local cat_id
+  cat_id="$(echo "$response" | python3 -c "
+import sys,json
+d=json.load(sys.stdin)
+target='${category}'
+for n in d['data']['repository']['discussionCategories']['nodes']:
+    if n['name']==target:
+        print(n['id'])
+        break
+" 2>/dev/null)" || return
+  if [[ -n "$cat_id" ]]; then
+    export MARKFLOW_GISCUS_CATEGORY_ID="$cat_id"
+    echo "  Fetched category ID: ${cat_id}" >&2
+  fi
 }
 
 # ─── BUILD CONFIG JS ───
@@ -147,13 +190,23 @@ build_config_js() {
   local root="${MARKFLOW_REPO_ROOT:-}"
   local branch_switcher="${MARKFLOW_BRANCH_SWITCHER:-false}"
   local giscus_repo="${MARKFLOW_GISCUS_REPO:-}"
+  local giscus_repo_id="${MARKFLOW_GISCUS_REPO_ID:-}"
   local giscus_category="${MARKFLOW_GISCUS_CATEGORY:-General}"
+  local giscus_category_id="${MARKFLOW_GISCUS_CATEGORY_ID:-}"
 
   [[ -n "$owner" ]] || die "MARKFLOW_REPO_OWNER is required"
   [[ -n "$name" ]] || die "MARKFLOW_REPO_NAME is required"
 
+  # Auto-fetch giscus IDs if repo is set but IDs are missing
+  if [[ -n "$giscus_repo" ]] && [[ -z "$giscus_repo_id" || -z "$giscus_category_id" ]]; then
+    echo "Fetching giscus IDs from GitHub..." >&2
+    fetch_giscus_ids "$giscus_repo" "$giscus_category"
+    giscus_repo_id="${MARKFLOW_GISCUS_REPO_ID:-}"
+    giscus_category_id="${MARKFLOW_GISCUS_CATEGORY_ID:-}"
+  fi
+
   cat <<CONFIGJS
-{repo:{owner:"${owner}",name:"${name}",branch:"${branch}",root:"${root}"},branchSwitcher:${branch_switcher},giscus:{repo:"${giscus_repo}",category:"${giscus_category}"}}
+{repo:{owner:"${owner}",name:"${name}",branch:"${branch}",root:"${root}"},branchSwitcher:${branch_switcher},giscus:{repo:"${giscus_repo}",repoId:"${giscus_repo_id}",category:"${giscus_category}",categoryId:"${giscus_category_id}"}}
 CONFIGJS
 }
 

@@ -747,7 +747,7 @@ const __MARKFLOW_CONTENT__ = /* __MARKFLOW_CONTENT_PLACEHOLDER__ */ null;
 
 // ─── STATE ───
 const state = {
-  owner: '', repo: '', branch: 'main', root: '', giscusRepo: '',
+  owner: '', repo: '', branch: 'main', root: '', giscusRepo: '', giscusRepoId: '', giscusCategoryId: '',
   branchSwitcher: false,
   sections: [],      // { name, pages: [{ title, path }] } — groups of pages
   pages: [],         // flat list: [{ title, path, sectionIdx }]
@@ -769,6 +769,8 @@ const state = {
     state.branch = __MARKFLOW_CONFIG__.repo.branch || 'main';
     state.root = __MARKFLOW_CONFIG__.repo.root || '';
     state.giscusRepo = __MARKFLOW_CONFIG__.giscus && __MARKFLOW_CONFIG__.giscus.repo || '';
+    state.giscusRepoId = __MARKFLOW_CONFIG__.giscus && __MARKFLOW_CONFIG__.giscus.repoId || '';
+    state.giscusCategoryId = __MARKFLOW_CONFIG__.giscus && __MARKFLOW_CONFIG__.giscus.categoryId || '';
     state.branchSwitcher = __MARKFLOW_CONFIG__.branchSwitcher || false;
 
     if (__MARKFLOW_CONTENT__) {
@@ -1364,9 +1366,9 @@ function loadGiscus(path) {
   var script = document.createElement('script');
   script.src = 'https://giscus.app/client.js';
   script.setAttribute('data-repo', state.giscusRepo);
-  script.setAttribute('data-repo-id', '');
+  script.setAttribute('data-repo-id', state.giscusRepoId);
   script.setAttribute('data-category', (__MARKFLOW_CONFIG__ && __MARKFLOW_CONFIG__.giscus && __MARKFLOW_CONFIG__.giscus.category) || 'General');
-  script.setAttribute('data-category-id', '');
+  script.setAttribute('data-category-id', state.giscusCategoryId);
   script.setAttribute('data-mapping', 'specific');
   script.setAttribute('data-term', path || 'index');
   script.setAttribute('data-strict', '0');

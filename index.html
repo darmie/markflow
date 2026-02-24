@@ -727,7 +727,7 @@
 <script>
 // ─── STATE ───
 const state = {
-  owner: '', repo: '', branch: 'main', root: '', giscusRepo: '',
+  owner: '', repo: '', branch: 'main', root: '', giscusRepo: '', giscusRepoId: '', giscusCategoryId: '',
   sections: [],      // { name, pages: [{ title, path }] } — groups of pages
   pages: [],         // flat list: [{ title, path, sectionIdx }]
   currentPage: -1,
@@ -1236,9 +1236,9 @@ function loadGiscus(path) {
   const script = document.createElement('script');
   script.src = 'https://giscus.app/client.js';
   script.setAttribute('data-repo', state.giscusRepo);
-  script.setAttribute('data-repo-id', '');
+  script.setAttribute('data-repo-id', state.giscusRepoId);
   script.setAttribute('data-category', 'General');
-  script.setAttribute('data-category-id', '');
+  script.setAttribute('data-category-id', state.giscusCategoryId);
   script.setAttribute('data-mapping', 'specific');
   script.setAttribute('data-term', path || 'index');
   script.setAttribute('data-strict', '0');
