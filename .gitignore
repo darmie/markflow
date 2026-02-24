@@ -1,0 +1,8 @@
+dist/
+site/
+.env
+!docs/.env
+!.env.example
+*.bak
+.DS_Store
+node_modules/
