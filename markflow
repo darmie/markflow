@@ -136,6 +136,9 @@ MARKFLOW_GISCUS_REPO_ID=
 MARKFLOW_GISCUS_CATEGORY=General
 MARKFLOW_GISCUS_CATEGORY_ID=
 
+# LLM-friendly output (generates llms.txt, llms-full.txt, api.json)
+MARKFLOW_LLM_FRIENDLY=true
+
 # GitHub API token for pre-baking (optional)
 # GITHUB_TOKEN=
 ENVFILE
@@ -431,6 +434,155 @@ prebake_github() {
   echo "{files:${js}}"
 }
 
+# ─── GENERATE LLMS.TXT ───
+generate_llms_txt() {
+  local source_dir="$1"
+  local output_dir="$2"
+  local brand="${MARKFLOW_BRAND_NAME:-${MARKFLOW_REPO_NAME:-Markflow}}"
+  local desc="${MARKFLOW_DESCRIPTION:-}"
+  local url="${MARKFLOW_URL:-}"
+
+  local llms_txt=""
+  local llms_full=""
+
+  # Header
+  llms_txt="# ${brand}"$'\n\n'
+  llms_full="# ${brand}"$'\n\n'
+
+  if [[ -n "$desc" ]]; then
+    llms_txt="${llms_txt}> ${desc}"$'\n\n'
+    llms_full="${llms_full}> ${desc}"$'\n\n'
+  fi
+
+  llms_txt="${llms_txt}## Docs"$'\n\n'
+
+  local first_full=true
+
+  while IFS= read -r -d '' file; do
+    local relpath="${file#"$source_dir"/}"
+
+    # Skip summary.md / index.md (not real doc pages)
+    local basename
+    basename="$(basename "$relpath")"
+    local lower_base
+    lower_base="$(echo "$basename" | tr '[:upper:]' '[:lower:]')"
+    [[ "$lower_base" == "summary.md" || "$lower_base" == "index.md" || "$lower_base" == "readme.md" ]] && continue
+
+    local content
+    content="$(cat "$file")"
+
+    # Extract H1 title
+    local title
+    title="$(echo "$content" | grep -m1 '^# ' | sed 's/^# //')"
+    [[ -z "$title" ]] && title="$(echo "$relpath" | sed 's/\.[^.]*$//; s/[-_]/ /g; s/[0-9]*-//')"
+
+    # Extract first paragraph for summary
+    local summary=""
+    local in_para=false
+    while IFS= read -r line; do
+      if [[ "$in_para" == false ]]; then
+        [[ "$line" =~ ^#+ ]] && continue
+        [[ "$line" =~ ^[[:space:]]*$ ]] && continue
+        in_para=true
+      fi
+      if [[ "$in_para" == true ]] && [[ "$line" =~ ^[[:space:]]*$ ]]; then
+        break
+      fi
+      [[ -n "$summary" ]] && summary="${summary} "
+      summary="${summary}${line}"
+    done <<< "$content"
+    # Strip markdown
+    summary="$(echo "$summary" | sed 's/\*\*\([^*]*\)\*\*/\1/g; s/\*\([^*]*\)\*/\1/g; s/`\([^`]*\)`/\1/g; s/\[\([^]]*\)\]([^)]*)/\1/g')"
+    [[ ${#summary} -gt 120 ]] && summary="${summary:0:117}..."
+
+    # llms.txt: page link + summary
+    if [[ -n "$url" ]]; then
+      llms_txt="${llms_txt}- [${title}](${url}#${relpath}): ${summary}"$'\n'
+    else
+      llms_txt="${llms_txt}- [${title}](#${relpath}): ${summary}"$'\n'
+    fi
+
+    # llms-full.txt: full content
+    if [[ "$first_full" == true ]]; then
+      first_full=false
+    else
+      llms_full="${llms_full}"$'\n---\n\n'
+    fi
+    llms_full="${llms_full}${content}"$'\n'
+
+  done < <(find "$source_dir" -type f \( -name "*.md" -o -name "*.markdown" -o -name "*.mdx" \) -print0 | sort -z)
+
+  echo "$llms_txt" > "${output_dir}/llms.txt"
+  echo "$llms_full" > "${output_dir}/llms-full.txt"
+  echo "Generated: llms.txt, llms-full.txt" >&2
+}
+
+# ─── GENERATE API.JSON ───
+generate_api_json() {
+  local source_dir="$1"
+  local output_dir="$2"
+  local brand="${MARKFLOW_BRAND_NAME:-${MARKFLOW_REPO_NAME:-Markflow}}"
+  local desc="${MARKFLOW_DESCRIPTION:-}"
+  local url="${MARKFLOW_URL:-}"
+
+  # Collect file paths and contents, then use Python to build JSON safely
+  local file_list=""
+  while IFS= read -r -d '' file; do
+    local relpath="${file#"$source_dir"/}"
+    local basename
+    basename="$(basename "$relpath")"
+    local lower_base
+    lower_base="$(echo "$basename" | tr '[:upper:]' '[:lower:]')"
+    [[ "$lower_base" == "summary.md" || "$lower_base" == "index.md" || "$lower_base" == "readme.md" ]] && continue
+    [[ -n "$file_list" ]] && file_list="${file_list}|"
+    file_list="${file_list}${file}"
+  done < <(find "$source_dir" -type f \( -name "*.md" -o -name "*.markdown" -o -name "*.mdx" \) -print0 | sort -z)
+
+  python3 -c "
+import json, re, os, sys
+
+brand = '''${brand}'''
+desc = '''${desc}'''
+url = '''${url}'''
+source_dir = '''${source_dir}'''
+file_list = '''${file_list}'''
+
+pages = []
+for fpath in file_list.split('|'):
+    if not fpath:
+        continue
+    relpath = os.path.relpath(fpath, source_dir)
+    with open(fpath, 'r') as f:
+        content = f.read()
+
+    # Extract H1 title
+    title_match = re.search(r'^# (.+)$', content, re.MULTILINE)
+    title = title_match.group(1) if title_match else relpath.rsplit('.', 1)[0].replace('-', ' ').replace('_', ' ').strip()
+
+    # Extract H2 sections
+    sections = re.findall(r'^## (.+)$', content, re.MULTILINE)
+
+    pages.append({
+        'path': relpath,
+        'title': title,
+        'sections': sections,
+        'content': content
+    })
+
+result = {
+    'name': brand,
+    'description': desc,
+    'url': url,
+    'pages': pages
+}
+
+with open(os.path.join('''${output_dir}''', 'api.json'), 'w') as f:
+    json.dump(result, f, indent=2, ensure_ascii=False)
+" 2>&1
+
+  echo "Generated: api.json" >&2
+}
+
 # ─── BUILD COMMAND ───
 cmd_build() {
   local output_dir="./dist"
@@ -500,6 +652,16 @@ cmd_build() {
 
   # Create output directory
   mkdir -p "$output_dir"
+
+  # Generate LLM-friendly files
+  local llm_friendly="${MARKFLOW_LLM_FRIENDLY:-}"
+  if [[ -z "$llm_friendly" ]] && [[ "$prebake" == true ]] && [[ -n "$source_dir" ]]; then
+    llm_friendly="true"
+  fi
+  if [[ "$llm_friendly" == "true" ]] && [[ -n "$source_dir" ]]; then
+    generate_llms_txt "$source_dir" "$output_dir"
+    generate_api_json "$source_dir" "$output_dir"
+  fi
 
   # Read template and perform replacements
   local html

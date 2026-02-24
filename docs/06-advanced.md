@@ -100,6 +100,67 @@ This lets readers switch between versions of your documentation — useful for p
 
 The branch list is fetched from the GitHub API at runtime. It works in both dynamic and pre-baked modes (in pre-baked mode, switching branches fetches content from GitHub for the new branch).
 
+## LLM-Friendly Output
+
+Markflow can generate machine-readable files alongside `index.html` so AI agents and LLM tools can discover and digest your documentation.
+
+### Configuration
+
+```env
+MARKFLOW_LLM_FRIENDLY=true
+```
+
+When enabled and building with `--source`, three additional files are generated in the output directory.
+
+### Output Files
+
+| File | Purpose |
+|------|---------|
+| `llms.txt` | Summary with page titles and links, following the [llms.txt standard](https://llmstxt.org/) |
+| `llms-full.txt` | Complete documentation content concatenated as markdown |
+| `api.json` | Structured JSON with page metadata, sections, and full content |
+
+### llms.txt
+
+A lightweight index for LLM agents to discover your documentation:
+
+```
+# My Docs
+
+> A short description of your project.
+
+## Docs
+
+- [Introduction](https://example.com#01-introduction.md): Overview of the project...
+- [Getting Started](https://example.com#02-getting-started.md): How to install and configure...
+```
+
+### llms-full.txt
+
+All documentation pages concatenated into a single markdown file, separated by `---`. Ideal for feeding an entire docs site into an LLM context window.
+
+### api.json
+
+Structured JSON with page metadata and content:
+
+```json
+{
+  "name": "My Docs",
+  "description": "...",
+  "url": "https://example.com",
+  "pages": [
+    {
+      "path": "01-introduction.md",
+      "title": "Introduction",
+      "sections": ["What is X", "Key Features"],
+      "content": "# Introduction\n\n## What is X\n..."
+    }
+  ]
+}
+```
+
+Set `MARKFLOW_LLM_FRIENDLY` to `false` to disable. When the variable is not set, it defaults to `true` for pre-baked builds with `--source`.
+
 ## Markdown Conventions
 
 ### File Organization
