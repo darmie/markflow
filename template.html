@@ -769,7 +769,7 @@ function prebakeLoad() {
   const files = __MARKFLOW_CONTENT__.files;
   const paths = Object.keys(files).sort();
   paths.forEach(function(p) {
-    state.fileCache.set(p, atob(files[p]));
+    state.fileCache.set(p, new TextDecoder().decode(Uint8Array.from(atob(files[p]), function(c) { return c.charCodeAt(0); })));
   });
   state.allFiles = new Set(paths.filter(function(p) { return isMarkdown(p); }));
   buildPages().then(function() {

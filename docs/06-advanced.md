@@ -16,11 +16,11 @@ The directory structure is preserved. Files are sorted alphabetically, so use nu
 
 ```
 docs/
-├── 01-intro.md       → Page 1
-├── 02-setup.md       → Page 2
-├── guides/
-│   ├── 01-basics.md  → Page 3 (in "guides" section)
-│   └── 02-advanced.md → Page 4
+|-- 01-intro.md       -> Page 1
+|-- 02-setup.md       -> Page 2
+|-- guides/
+|   |-- 01-basics.md  -> Page 3 (in "guides" section)
+|   +-- 02-advanced.md -> Page 4
 ```
 
 ### From GitHub API
@@ -99,14 +99,14 @@ Markflow groups files into sections based on directory structure:
 
 ```
 docs/
-├── 01-intro.md            → "root" section
-├── 02-quickstart.md       → "root" section
-├── guides/
-│   ├── 01-basics.md       → "guides" section
-│   └── 02-advanced.md     → "guides" section
-└── reference/
-    ├── 01-api.md           → "reference" section
-    └── 02-config.md        → "reference" section
+|-- 01-intro.md            -> "root" section
+|-- 02-quickstart.md       -> "root" section
+|-- guides/
+|   |-- 01-basics.md       -> "guides" section
+|   +-- 02-advanced.md     -> "guides" section
++-- reference/
+    |-- 01-api.md           -> "reference" section
+    +-- 02-config.md        -> "reference" section
 ```
 
 Top-level files appear first, followed by subdirectory sections. Within each section, files are sorted alphabetically.
@@ -140,6 +140,32 @@ More details shown as a sub-item.
 Content for step 2.
 ```
 
+### Embedding Videos
+
+You can embed YouTube or other videos using standard HTML in your Markdown:
+
+```html
+<iframe width="560" height="315"
+  src="https://www.youtube.com/embed/VIDEO_ID"
+  frameborder="0"
+  allowfullscreen>
+</iframe>
+```
+
+For a responsive embed that scales with the page width, wrap it in a container:
+
+```html
+<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;">
+  <iframe style="position:absolute;top:0;left:0;width:100%;height:100%;"
+    src="https://www.youtube.com/embed/VIDEO_ID"
+    frameborder="0"
+    allowfullscreen>
+  </iframe>
+</div>
+```
+
+This works with any embeddable video source (Vimeo, Loom, etc.) — just swap the `src` URL.
+
 ### Supported Markdown Features
 
 Markflow uses [marked.js](https://marked.js.org/) for rendering with full GitHub Flavored Markdown support:
@@ -152,3 +178,4 @@ Markflow uses [marked.js](https://marked.js.org/) for rendering with full GitHub
 - Inline code, bold, italic, strikethrough
 - Horizontal rules
 - Task lists
+- HTML blocks (for video embeds, custom elements, etc.)

@@ -88,10 +88,10 @@ Files are sorted alphabetically. Use numeric prefixes to control order:
 
 ```
 docs/
-├── 01-introduction.md
-├── 02-getting-started.md
-├── 03-configuration.md
-└── 04-advanced.md
+|-- 01-introduction.md
+|-- 02-getting-started.md
+|-- 03-configuration.md
++-- 04-advanced.md
 ```
 
 ### Heading Hierarchy

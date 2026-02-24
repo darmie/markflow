@@ -34,7 +34,7 @@ Markflow has two rendering modes:
 The generated page fetches Markdown from the GitHub API at runtime. Great for always-up-to-date docs, but requires the reader to be online.
 
 ```
-Reader opens page → JS fetches repo tree → fetches .md files → renders with marked.js
+Reader opens page -> JS fetches repo tree -> fetches .md files -> renders with marked.js
 ```
 
 ### Pre-baked Mode
@@ -42,7 +42,7 @@ Reader opens page → JS fetches repo tree → fetches .md files → renders wit
 Markdown is base64-encoded and embedded into the HTML at build time. The page works fully offline — no API calls needed.
 
 ```
-markflow build --prebake --source ./docs → index.html with embedded content
+markflow build --prebake --source ./docs -> index.html with embedded content
 ```
 
 ## Architecture
@@ -57,7 +57,7 @@ Markflow consists of two files:
 The CLI takes `template.html`, injects your configuration (repo details, theme, branding, social links), and outputs a self-contained `index.html`.
 
 ```
-.env config ──┐
-               ├──→ markflow build ──→ index.html
-template.html ─┘
+.env config ---+
+               +--> markflow build --> index.html
+template.html -+
 ```
