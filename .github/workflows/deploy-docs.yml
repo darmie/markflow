@@ -27,6 +27,7 @@ jobs:
           chmod +x ./markflow
           ./markflow build --prebake --source ./docs --output ./site --config ./docs/.env
           echo "markflow.page" > ./site/CNAME
+          cp .github/screenshot.png ./site/screenshot.png
 
       - uses: actions/configure-pages@v5
 
