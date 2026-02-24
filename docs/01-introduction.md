@@ -23,6 +23,7 @@ No build pipeline, no Node.js runtime, no framework dependencies. Just a Bash sc
 - **Branch switching** — readers can toggle between branches and tags
 - **Social links** — GitHub, Twitter/X, Discord, LinkedIn, YouTube, website
 - **Giscus comments** — discussion threads on every page
+- **LLM-friendly** — generates `llms.txt` and `api.json` for AI agent consumption
 - **Responsive** — works on desktop, tablet, and mobile
 
 ## How It Works
@@ -42,7 +43,7 @@ Reader opens page -> JS fetches repo tree -> fetches .md files -> renders with m
 Markdown is base64-encoded and embedded into the HTML at build time. The page works fully offline — no API calls needed.
 
 ```
-markflow build --prebake --source ./docs -> index.html with embedded content
+markflow build --prebake --source ./docs -> index.html + llms.txt + api.json
 ```
 
 ## Architecture
@@ -57,7 +58,8 @@ Markflow consists of two files:
 The CLI takes `template.html`, injects your configuration (repo details, theme, branding, social links), and outputs a self-contained `index.html`.
 
 ```
-.env config ---+
-               +--> markflow build --> index.html
-template.html -+
+.env config ---+                        +--> index.html
+               +--> markflow build --+  +--> llms.txt
+template.html -+                     +--> llms-full.txt
+                                        +--> api.json
 ```

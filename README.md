@@ -12,6 +12,7 @@ Turn Markdown files into beautiful, step-by-step tutorial pages — inspired by 
 - **Theming** — 14 CSS variables for full color customization
 - **Social links** — GitHub, Twitter/X, Discord, LinkedIn, YouTube, website icons
 - **Giscus comments** — GitHub Discussions-powered comments on every page
+- **LLM-friendly** — generates `llms.txt` and `api.json` for AI agent consumption
 - **Responsive** — desktop, tablet, and mobile layouts
 
 ## Quick Start
@@ -78,6 +79,7 @@ docs/
 | `markflow build --config ./custom.env` | Use custom config file |
 | `markflow serve` | Preview at `localhost:3000` |
 | `markflow serve --port 8080` | Preview on custom port |
+| `markflow build --serve` | Build and preview in one step |
 
 ## Deploy to GitHub Pages
 
@@ -140,6 +142,21 @@ All options are set in `.env`. Run `markflow init` to generate a template.
 | `MARKFLOW_BRAND_LOGO` | — | SVG file, URL, or inline SVG |
 | `MARKFLOW_ACCENT` | `#c4956a` | Primary accent color |
 | `MARKFLOW_GISCUS_REPO` | — | Enable Giscus comments |
+| `MARKFLOW_LLM_FRIENDLY` | `true`* | Generate `llms.txt`, `llms-full.txt`, `api.json` |
+
+\* Defaults to `true` for pre-baked builds with `--source`.
+
+### LLM-Friendly Output
+
+When building with `--source`, Markflow generates machine-readable files alongside `index.html`:
+
+| File | Purpose |
+|------|---------|
+| `llms.txt` | Summary index following the [llms.txt standard](https://llmstxt.org/) |
+| `llms-full.txt` | All pages concatenated as markdown |
+| `api.json` | Structured JSON with page metadata, sections, and content |
+
+These let AI agents and LLM tools discover and digest your documentation without rendering JavaScript. Set `MARKFLOW_LLM_FRIENDLY=false` to disable.
 
 See [full documentation](https://darmie.github.io/markflow/) for all theme colors and social link options.
 

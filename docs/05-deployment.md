@@ -70,6 +70,8 @@ The `--prebake --source ./docs` flags embed all Markdown into the HTML so no run
 
 The `--config ./docs/.env` flag uses a separate config file for the docs site. This lets you keep the docs config separate from any project-level `.env`.
 
+When `MARKFLOW_LLM_FRIENDLY` is enabled (the default for `--source` builds), the output directory will also contain `llms.txt`, `llms-full.txt`, and `api.json` — these are deployed alongside `index.html` automatically.
+
 ## Custom Domain
 
 To use a custom domain:
@@ -116,4 +118,4 @@ Create a `vercel.json`:
 
 ### Any Static Host
 
-Markflow outputs a single `index.html`. Upload the output directory to any static hosting provider — S3, Cloudflare Pages, Firebase Hosting, or just drop it on any web server.
+Markflow outputs `index.html` along with LLM-friendly files (`llms.txt`, `llms-full.txt`, `api.json`). Upload the entire output directory to any static hosting provider — S3, Cloudflare Pages, Firebase Hosting, or just drop it on any web server.
