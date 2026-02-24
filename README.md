@@ -2,6 +2,8 @@
 
 Turn Markdown files into beautiful, step-by-step tutorial pages — inspired by Google Codelabs.
 
+![Markflow Screenshot](.github/screenshot.png)
+
 ## Features
 
 - **Zero dependencies** — Bash CLI, single-file HTML output
