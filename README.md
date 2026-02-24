@@ -158,7 +158,7 @@ When building with `--source`, Markflow generates machine-readable files alongsi
 
 These let AI agents and LLM tools discover and digest your documentation without rendering JavaScript. Set `MARKFLOW_LLM_FRIENDLY=false` to disable.
 
-See [full documentation](https://darmie.github.io/markflow/) for all theme colors and social link options.
+See [full documentation](https://markflow.page/) for all theme colors and social link options.
 
 ## License
 

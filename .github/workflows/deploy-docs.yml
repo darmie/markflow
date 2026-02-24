@@ -26,6 +26,7 @@ jobs:
         run: |
           chmod +x ./markflow
           ./markflow build --prebake --source ./docs --output ./site --config ./docs/.env
+          echo "markflow.page" > ./site/CNAME
 
       - uses: actions/configure-pages@v5
 
