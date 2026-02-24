@@ -206,6 +206,53 @@ build_brand_logo() {
   fi
 }
 
+# ─── EXTRACT DESCRIPTION FROM MARKDOWN ───
+# Looks for summary.md or index.md, extracts first paragraph as description
+extract_description() {
+  local source_dir="$1"
+  [[ -d "$source_dir" ]] || return
+
+  local desc_file=""
+  # Priority: summary.md > index.md > first .md file alphabetically
+  for candidate in "summary.md" "SUMMARY.md" "index.md" "INDEX.md"; do
+    if [[ -f "${source_dir}/${candidate}" ]]; then
+      desc_file="${source_dir}/${candidate}"
+      break
+    fi
+  done
+  # Fallback to first .md file
+  if [[ -z "$desc_file" ]]; then
+    desc_file="$(find "$source_dir" -maxdepth 1 -type f -name "*.md" | sort | head -1)"
+  fi
+  [[ -z "$desc_file" ]] && return
+
+  # Extract first paragraph: skip headings, blank lines, then grab text until next blank line
+  local para=""
+  local in_para=false
+  while IFS= read -r line; do
+    # Skip headings and blank lines before paragraph
+    if [[ "$in_para" == false ]]; then
+      [[ "$line" =~ ^#+ ]] && continue
+      [[ "$line" =~ ^[[:space:]]*$ ]] && continue
+      in_para=true
+    fi
+    # Stop at blank line after paragraph starts
+    if [[ "$in_para" == true ]] && [[ "$line" =~ ^[[:space:]]*$ ]]; then
+      break
+    fi
+    [[ -n "$para" ]] && para="${para} "
+    para="${para}${line}"
+  done < "$desc_file"
+
+  # Strip markdown formatting: bold, italic, code, links
+  para="$(echo "$para" | sed 's/\*\*\([^*]*\)\*\*/\1/g; s/\*\([^*]*\)\*/\1/g; s/`\([^`]*\)`/\1/g; s/\[\([^]]*\)\]([^)]*)/\1/g')"
+  # Truncate to 160 chars for meta description
+  if [[ ${#para} -gt 160 ]]; then
+    para="${para:0:157}..."
+  fi
+  echo "$para"
+}
+
 # ─── BUILD SEO META ───
 build_seo_meta() {
   local title="${MARKFLOW_BRAND_NAME:-${MARKFLOW_REPO_NAME:-Markflow}}"
@@ -368,6 +415,15 @@ cmd_build() {
   local brand_name="${MARKFLOW_BRAND_NAME:-${MARKFLOW_REPO_NAME:-Markflow}}"
 
   local page_title="${MARKFLOW_BRAND_NAME:-${MARKFLOW_REPO_NAME:-Markflow}}"
+
+  # Auto-extract description from summary.md/index.md if not set
+  if [[ -z "${MARKFLOW_DESCRIPTION:-}" ]] && [[ -n "$source_dir" ]]; then
+    local auto_desc
+    auto_desc="$(extract_description "$source_dir")"
+    if [[ -n "$auto_desc" ]]; then
+      export MARKFLOW_DESCRIPTION="$auto_desc"
+    fi
+  fi
 
   local seo_meta
   seo_meta="$(build_seo_meta)"

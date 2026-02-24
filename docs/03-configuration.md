@@ -139,3 +139,21 @@ MARKFLOW_OG_IMAGE=https://your-org.github.io/your-repo/og-image.png
 | `MARKFLOW_OG_IMAGE` | Image URL for `og:image` and `twitter:image` |
 
 All three are optional. The page title (`og:title`, `twitter:title`) is automatically set from `MARKFLOW_BRAND_NAME` or the repo name. Twitter cards use `summary_large_image` format.
+
+### Auto-extracted Description
+
+If `MARKFLOW_DESCRIPTION` is left blank and you build with `--source`, the description is automatically extracted from the first paragraph of a markdown file in this priority order:
+
+1. `summary.md` or `SUMMARY.md`
+2. `index.md` or `INDEX.md`
+3. First `.md` file alphabetically
+
+Headings and markdown formatting are stripped. The text is truncated to 160 characters for the meta description.
+
+Create a `summary.md` in your docs folder to set the description without configuring `.env`:
+
+```markdown
+# My Project
+
+A concise description of your project that will be used for SEO and social media previews.
+```
