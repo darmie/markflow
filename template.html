@@ -797,7 +797,19 @@ function prebakeLoad() {
   buildPages().then(function() {
     if (state.pages.length > 0) {
       document.getElementById('stepNav').style.display = 'flex';
-      loadPage(0);
+      // Restore page from hash or sessionStorage
+      var startPage = 0;
+      var hash = window.location.hash.slice(1);
+      if (hash) {
+        var idx = state.pages.findIndex(function(p) { return p.path === hash; });
+        if (idx >= 0) startPage = idx;
+      } else {
+        try {
+          var saved = sessionStorage.getItem('markflow_page');
+          if (saved !== null) startPage = Math.min(parseInt(saved, 10), state.pages.length - 1);
+        } catch(e) {}
+      }
+      loadPage(startPage);
     }
   });
 }
@@ -1050,7 +1062,11 @@ async function loadPage(pageIdx) {
   var select = document.getElementById('folderDropdown');
   if (select) select.value = pageIdx;
 
-  if (!__MARKFLOW_CONFIG__) {
+  if (__MARKFLOW_CONFIG__) {
+    // CLI-built mode: use hash with page path for deep linking
+    history.pushState(null, '', '#' + page.path);
+    try { sessionStorage.setItem('markflow_page', String(pageIdx)); } catch(e) {}
+  } else {
     var hashBase = state.owner + '/' + state.repo + '/' + state.branch;
     var fullHash = state.root
       ? hashBase + '/' + state.root + '/' + page.path
@@ -1351,7 +1367,8 @@ function loadGiscus(path) {
   script.setAttribute('data-repo-id', '');
   script.setAttribute('data-category', (__MARKFLOW_CONFIG__ && __MARKFLOW_CONFIG__.giscus && __MARKFLOW_CONFIG__.giscus.category) || 'General');
   script.setAttribute('data-category-id', '');
-  script.setAttribute('data-mapping', 'pathname');
+  script.setAttribute('data-mapping', 'specific');
+  script.setAttribute('data-term', path || 'index');
   script.setAttribute('data-strict', '0');
   script.setAttribute('data-reactions-enabled', '1');
   script.setAttribute('data-emit-metadata', '0');
@@ -1409,6 +1426,9 @@ function closeSidebar() {
 function getPathFromHash() {
   var hash = window.location.hash.slice(1);
   if (!hash) return '';
+  // CLI-built mode: hash is just the page path
+  if (__MARKFLOW_CONFIG__) return hash;
+  // Dynamic mode: hash is owner/repo/branch/path
   var prefix = state.root
     ? state.owner + '/' + state.repo + '/' + state.branch + '/' + state.root
     : state.owner + '/' + state.repo + '/' + state.branch;
