@@ -23,19 +23,22 @@ markflow — Generate beautiful documentation from Markdown
 Usage:
   markflow init                              Create .env with defaults
   markflow build [options]                   Generate index.html
-  markflow serve [--port PORT]               Local preview server
+  markflow serve [--port PORT] [--dir DIR]   Local preview server
 
 Build options:
   --output DIR          Output directory (default: ./dist)
   --prebake             Pre-bake content (embed markdown into HTML)
   --source DIR          Local markdown source for pre-baking
   --config FILE         Config file path (default: .env)
+  --serve               Start preview server after build
+  --port PORT           Server port (default: 3000, used with --serve)
 
 Examples:
   markflow init
   markflow build --output ./public
   markflow build --prebake --source ./docs
-  markflow build --prebake                   # Uses GitHub API + GITHUB_TOKEN
+  markflow build --prebake --source ./docs --serve
+  markflow build --prebake --serve --port 8080
   markflow serve --port 8080
 
 USAGE
@@ -381,6 +384,8 @@ cmd_build() {
   local prebake=false
   local source_dir=""
   local config_file=".env"
+  local serve_after=false
+  local serve_port=3000
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -388,6 +393,8 @@ cmd_build() {
       --prebake) prebake=true; shift ;;
       --source)  source_dir="$2"; shift 2 ;;
       --config)  config_file="$2"; shift 2 ;;
+      --serve)   serve_after=true; shift ;;
+      --port)    serve_port="$2"; shift 2 ;;
       *) die "Unknown build option: $1" ;;
     esac
   done
@@ -509,6 +516,10 @@ with open('$tmpfile', 'w') as f:
   rm -f "$tmpfile" "${tmpfile}.bak"
 
   echo "Built: ${output_dir}/index.html"
+
+  if [[ "$serve_after" == true ]]; then
+    cmd_serve --port "$serve_port" --dir "$output_dir"
+  fi
 }
 
 # ─── SERVE COMMAND ───

@@ -59,12 +59,34 @@ markflow build --config ./my-config.env
 
 Path to the configuration file. Defaults to `.env` in the current directory.
 
+### --serve
+
+```bash
+markflow build --prebake --source ./docs --serve
+```
+
+Starts a local preview server immediately after the build completes. This combines `build` and `serve` into a single command.
+
+### --port
+
+```bash
+markflow build --prebake --source ./docs --serve --port 8080
+```
+
+Sets the server port when using `--serve`. Defaults to `3000`. This flag is only used when `--serve` is also passed.
+
 ### Combined Examples
 
 Build with pre-baked local content:
 
 ```bash
 markflow build --prebake --source ./docs --output ./dist
+```
+
+Build and preview in one step:
+
+```bash
+markflow build --prebake --source ./docs --serve
 ```
 
 Build with pre-baked GitHub content:
@@ -111,6 +133,12 @@ Directory to serve. Defaults to `./dist`.
 markflow build --prebake --source ./docs
 markflow serve --port 4000
 # Open http://localhost:4000
+```
+
+Or use `--serve` on the build command to combine both steps:
+
+```bash
+markflow build --prebake --source ./docs --serve --port 4000
 ```
 
 ## Version and Help
