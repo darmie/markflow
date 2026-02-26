@@ -139,6 +139,8 @@ MARKFLOW_GISCUS_CATEGORY_ID=
 # LLM-friendly output (generates llms.txt, llms-full.txt, api.json)
 MARKFLOW_LLM_FRIENDLY=true
 
+# Sitemap (auto-generated when MARKFLOW_URL is set)
+
 # GitHub API token for pre-baking (optional)
 # GITHUB_TOKEN=
 ENVFILE
@@ -583,6 +585,87 @@ with open(os.path.join('''${output_dir}''', 'api.json'), 'w') as f:
   echo "Generated: api.json" >&2
 }
 
+# ─── GENERATE SITEMAP.XML ───
+generate_sitemap() {
+  local source_dir="$1"
+  local output_dir="$2"
+  local url="${MARKFLOW_URL:-}"
+
+  [[ -n "$url" ]] || return 0
+  # Strip trailing slash
+  url="${url%/}"
+
+  local today
+  today="$(date +%Y-%m-%d)"
+
+  local xml='<?xml version="1.0" encoding="UTF-8"?>'$'\n'
+  xml="${xml}"'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'$'\n'
+
+  # Root URL
+  xml="${xml}  <url>"$'\n'
+  xml="${xml}    <loc>${url}</loc>"$'\n'
+  xml="${xml}    <lastmod>${today}</lastmod>"$'\n'
+  xml="${xml}    <priority>1.0</priority>"$'\n'
+  xml="${xml}  </url>"$'\n'
+
+  while IFS= read -r -d '' file; do
+    local relpath="${file#"$source_dir"/}"
+
+    # Skip summary/index/readme
+    local basename
+    basename="$(basename "$relpath")"
+    local lower_base
+    lower_base="$(echo "$basename" | tr '[:upper:]' '[:lower:]')"
+    [[ "$lower_base" == "summary.md" || "$lower_base" == "index.md" || "$lower_base" == "readme.md" ]] && continue
+
+    local content
+    content="$(cat "$file")"
+
+    # Page URL
+    xml="${xml}  <url>"$'\n'
+    xml="${xml}    <loc>${url}/#${relpath}</loc>"$'\n'
+    xml="${xml}    <lastmod>${today}</lastmod>"$'\n'
+    xml="${xml}    <priority>0.8</priority>"$'\n'
+    xml="${xml}  </url>"$'\n'
+
+    # Extract h2/h3/h4 sections as sub-URLs
+    local in_code=false
+    while IFS= read -r line; do
+      if [[ "$line" == '```'* ]]; then
+        if [[ "$in_code" == true ]]; then in_code=false; else in_code=true; fi
+        continue
+      fi
+      [[ "$in_code" == true ]] && continue
+
+      local heading_match
+      heading_match="$(echo "$line" | grep -oE '^#{2,4}\s+.+')" || true
+      [[ -z "$heading_match" ]] && continue
+
+      local heading_text
+      heading_text="$(echo "$heading_match" | sed 's/^#*[[:space:]]*//')"
+      # Strip markdown formatting
+      heading_text="$(echo "$heading_text" | sed 's/\*\*//g; s/__//g; s/`//g')"
+      # Generate id same as JS
+      local heading_id
+      heading_id="$(echo "$heading_text" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g; s/^-*//; s/-*$//')"
+
+      [[ -z "$heading_id" ]] && continue
+
+      xml="${xml}  <url>"$'\n'
+      xml="${xml}    <loc>${url}/#${relpath}~${heading_id}</loc>"$'\n'
+      xml="${xml}    <lastmod>${today}</lastmod>"$'\n'
+      xml="${xml}    <priority>0.6</priority>"$'\n'
+      xml="${xml}  </url>"$'\n'
+    done <<< "$content"
+
+  done < <(find "$source_dir" -type f \( -name "*.md" -o -name "*.markdown" -o -name "*.mdx" \) -print0 | sort -z)
+
+  xml="${xml}</urlset>"$'\n'
+
+  echo "$xml" > "${output_dir}/sitemap.xml"
+  echo "Generated: sitemap.xml" >&2
+}
+
 # ─── BUILD COMMAND ───
 cmd_build() {
   local output_dir="./dist"
@@ -661,6 +744,11 @@ cmd_build() {
   if [[ "$llm_friendly" == "true" ]] && [[ -n "$source_dir" ]]; then
     generate_llms_txt "$source_dir" "$output_dir"
     generate_api_json "$source_dir" "$output_dir"
+  fi
+
+  # Generate sitemap.xml if URL is configured and source is available
+  if [[ -n "${MARKFLOW_URL:-}" ]] && [[ -n "$source_dir" ]]; then
+    generate_sitemap "$source_dir" "$output_dir"
   fi
 
   # Read template and perform replacements

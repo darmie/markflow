@@ -559,6 +559,33 @@
   }
   .sidebar-overlay.visible { display: block; }
 
+  /* ─── HEADING ANCHOR LINKS ─── */
+  .markdown-body h1, .markdown-body h2, .markdown-body h3,
+  .markdown-body h4, .markdown-body h5, .markdown-body h6 {
+    position: relative;
+  }
+  .heading-anchor {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 8px;
+    color: var(--text-muted);
+    text-decoration: none;
+    opacity: 0;
+    transition: opacity var(--transition), color var(--transition);
+    vertical-align: middle;
+    cursor: pointer;
+  }
+  .markdown-body h1:hover .heading-anchor,
+  .markdown-body h2:hover .heading-anchor,
+  .markdown-body h3:hover .heading-anchor,
+  .markdown-body h4:hover .heading-anchor,
+  .markdown-body h5:hover .heading-anchor,
+  .markdown-body h6:hover .heading-anchor,
+  .heading-anchor:focus { opacity: 1; }
+  .heading-anchor:hover { color: var(--accent); }
+  .heading-anchor.copied { color: var(--accent-bright); }
+  .heading-anchor svg { pointer-events: none; }
+
   /* Copy button for code blocks */
   .code-copy-btn {
     position: absolute;
@@ -801,17 +828,18 @@ function prebakeLoad() {
       document.getElementById('stepNav').style.display = 'flex';
       // Restore page from hash or sessionStorage
       var startPage = 0;
-      var hash = window.location.hash.slice(1);
-      if (hash) {
-        var idx = state.pages.findIndex(function(p) { return p.path === hash; });
-        if (idx >= 0) startPage = idx;
-      } else {
+      var startSection = '';
+      var hashInfo = parseHash();
+      if (hashInfo.path) {
+        var idx = state.pages.findIndex(function(p) { return p.path === hashInfo.path; });
+        if (idx >= 0) { startPage = idx; startSection = hashInfo.section; }
+      } else if (!hashInfo.path && !hashInfo.section) {
         try {
           var saved = sessionStorage.getItem('markflow_page');
           if (saved !== null) startPage = Math.min(parseInt(saved, 10), state.pages.length - 1);
         } catch(e) {}
       }
-      loadPage(startPage);
+      loadPage(startPage, startSection);
     }
   });
 }
@@ -906,10 +934,10 @@ async function fetchTree() {
     await buildPages();
     if (state.pages.length > 0) {
       document.getElementById('stepNav').style.display = 'flex';
-      var hashPath = getPathFromHash();
-      var pageIdx = hashPath ? state.pages.findIndex(function(p) { return p.path === hashPath; }) : 0;
+      var hashInfo = parseHash();
+      var pageIdx = hashInfo.path ? state.pages.findIndex(function(p) { return p.path === hashInfo.path; }) : 0;
       if (pageIdx < 0) pageIdx = 0;
-      await loadPage(pageIdx);
+      await loadPage(pageIdx, hashInfo.section);
     } else {
       showError('No markdown files found in this path.');
     }
@@ -1055,7 +1083,7 @@ function onFolderChange(val) {
 }
 
 // ─── LOAD PAGE & EXTRACT STEPS (H2 SECTIONS) ───
-async function loadPage(pageIdx) {
+async function loadPage(pageIdx, sectionId) {
   if (pageIdx < 0 || pageIdx >= state.pages.length) return;
   state.currentPage = pageIdx;
   state.currentStep = 0;
@@ -1064,22 +1092,28 @@ async function loadPage(pageIdx) {
   var select = document.getElementById('folderDropdown');
   if (select) select.value = pageIdx;
 
+  var hashSuffix = sectionId ? '~' + sectionId : '';
   if (__MARKFLOW_CONFIG__) {
     // CLI-built mode: use hash with page path for deep linking
-    history.pushState(null, '', '#' + page.path);
+    history.pushState(null, '', '#' + page.path + hashSuffix);
     try { sessionStorage.setItem('markflow_page', String(pageIdx)); } catch(e) {}
   } else {
     var hashBase = state.owner + '/' + state.repo + '/' + state.branch;
     var fullHash = state.root
       ? hashBase + '/' + state.root + '/' + page.path
       : hashBase + '/' + page.path;
-    history.pushState(null, '', '#' + fullHash);
+    history.pushState(null, '', '#' + fullHash + hashSuffix);
   }
 
   document.getElementById('breadcrumb').innerHTML = '<span>' + escapeHtml(page.title) + '</span>';
   closeSidebar();
   await renderPage(page);
-  window.scrollTo(0, 0);
+  // Scroll to section anchor if present
+  if (sectionId) {
+    setTimeout(function() { scrollToId(sectionId); }, 50);
+  } else {
+    window.scrollTo(0, 0);
+  }
 }
 
 async function renderPage(page) {
@@ -1287,7 +1321,12 @@ function parseMarkdown(text) {
     }
     var plainText = String(text).replace(/<[^>]*>/g, '');
     var id = plainText.toLowerCase().replace(/[^\w]+/g, '-').replace(/^-|-$/g, '');
-    return '<h' + depth + ' id="' + id + '">' + text + '</h' + depth + '>';
+    var anchor = '<a class="heading-anchor" href="#' + id + '" aria-label="Copy link to section" onclick="copyHeadingLink(event, \'' + id + '\')">'
+      + '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+      + '<path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/>'
+      + '<path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>'
+      + '</svg></a>';
+    return '<h' + depth + ' id="' + id + '">' + text + anchor + '</h' + depth + '>';
   };
   renderer.link = function(hrefOrToken, titleArg, textArg) {
     var href, title, text;
@@ -1399,6 +1438,22 @@ function showLoading(msg) {
 function showError(msg) {
   document.getElementById('contentArea').innerHTML = '<div class="error-state"><p>Something went wrong</p><code>' + escapeHtml(msg) + '</code></div>';
 }
+function copyHeadingLink(e, id) {
+  e.preventDefault();
+  e.stopPropagation();
+  var page = state.pages[state.currentPage];
+  var base = window.location.href.split('#')[0];
+  var hash = page ? page.path + '~' + id : id;
+  var url = base + '#' + hash;
+  history.replaceState(null, '', '#' + hash);
+  navigator.clipboard.writeText(url).then(function() {
+    var anchor = e.currentTarget;
+    anchor.classList.add('copied');
+    var orig = anchor.innerHTML;
+    anchor.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+    setTimeout(function() { anchor.innerHTML = orig; anchor.classList.remove('copied'); }, 1500);
+  });
+}
 function addCodeCopyButtons() {
   document.querySelectorAll('.markdown-body pre').forEach(function(pre) {
     var btn = document.createElement('button');
@@ -1425,18 +1480,27 @@ function closeSidebar() {
 }
 
 // ─── HASH ROUTING ───
-function getPathFromHash() {
+function parseHash() {
   var hash = window.location.hash.slice(1);
-  if (!hash) return '';
-  // CLI-built mode: hash is just the page path
-  if (__MARKFLOW_CONFIG__) return hash;
+  if (!hash) return { path: '', section: '' };
+  var section = '';
+  // Split on ~ to get section anchor
+  var tildeIdx = hash.indexOf('~');
+  if (tildeIdx >= 0) {
+    section = hash.slice(tildeIdx + 1);
+    hash = hash.slice(0, tildeIdx);
+  }
+  if (__MARKFLOW_CONFIG__) return { path: hash, section: section };
   // Dynamic mode: hash is owner/repo/branch/path
   var prefix = state.root
     ? state.owner + '/' + state.repo + '/' + state.branch + '/' + state.root
     : state.owner + '/' + state.repo + '/' + state.branch;
-  if (hash.startsWith(prefix + '/')) return hash.slice(prefix.length + 1);
-  if (hash === prefix) return '';
-  return '';
+  if (hash.startsWith(prefix + '/')) return { path: hash.slice(prefix.length + 1), section: section };
+  if (hash === prefix) return { path: '', section: section };
+  return { path: '', section: section };
+}
+function getPathFromHash() {
+  return parseHash().path;
 }
 function initFromHash() {
   var hash = window.location.hash.slice(1);
@@ -1459,9 +1523,13 @@ function initFromHash() {
 }
 window.addEventListener('popstate', function() {
   if (state.pages.length) {
-    var path = getPathFromHash();
-    var idx = state.pages.findIndex(function(p) { return p.path === path; });
-    if (idx >= 0 && idx !== state.currentPage) loadPage(idx);
+    var hashInfo = parseHash();
+    var idx = state.pages.findIndex(function(p) { return p.path === hashInfo.path; });
+    if (idx >= 0 && idx !== state.currentPage) {
+      loadPage(idx, hashInfo.section);
+    } else if (hashInfo.section) {
+      scrollToId(hashInfo.section);
+    }
   }
 });
 // Keyboard navigation
