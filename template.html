@@ -1122,7 +1122,7 @@ async function renderPage(page) {
   try {
     var raw = await fetchFile(page.path);
     var result = parseFrontmatter(raw);
-    var html = parseMarkdown(result.body);
+    var html = parseMarkdown(result.body, page.path);
     var displayName = result.frontmatter.title || page.title;
 
     var articleHTML = '<div class="fade-in">';
@@ -1292,7 +1292,24 @@ function updateStepNav() {
 }
 
 // ─── MARKDOWN PARSING (Marked.js v12) ───
-function parseMarkdown(text) {
+function resolvePath(href, currentPagePath) {
+  // Resolve a relative href against the directory of currentPagePath
+  var dirParts = currentPagePath.split('/');
+  dirParts.pop(); // remove filename, leaving directory segments
+  var hrefClean = href.replace(/^\.\//, '');
+  var parts = dirParts.concat(hrefClean.split('/'));
+  // Resolve .. segments
+  var resolved = [];
+  for (var i = 0; i < parts.length; i++) {
+    if (parts[i] === '..') {
+      if (resolved.length > 0) resolved.pop();
+    } else if (parts[i] && parts[i] !== '.') {
+      resolved.push(parts[i]);
+    }
+  }
+  return resolved.join('/');
+}
+function parseMarkdown(text, currentPagePath) {
   var renderer = new marked.Renderer();
   renderer.image = function(hrefOrToken, titleArg, textArg) {
     var href, title, text;
@@ -1337,10 +1354,28 @@ function parseMarkdown(text) {
     }
     var titleAttr = title ? ' title="' + escapeHtml(title) + '"' : '';
     if (href && !href.startsWith('http') && !href.startsWith('#') && isMarkdown(href.split('#')[0])) {
-      var cleanPath = href.replace(/^\.\//, '').replace(/^\//, '').split('#')[0];
-      var pageIdx = state.pages.findIndex(function(p) { return p.path === cleanPath; });
+      var hashIdx = href.indexOf('#');
+      var fragment = hashIdx >= 0 ? href.slice(hashIdx + 1) : '';
+      var filePart = (hashIdx >= 0 ? href.slice(0, hashIdx) : href).replace(/^\.\//, '').replace(/^\//, '');
+      // Resolve relative path against current page directory
+      var resolved = currentPagePath ? resolvePath(filePart, currentPagePath) : filePart;
+      var pageIdx = state.pages.findIndex(function(p) { return p.path === resolved; });
+      // Fallback: try without resolution (flat structure)
+      if (pageIdx < 0) {
+        pageIdx = state.pages.findIndex(function(p) { return p.path === filePart; });
+      }
+      // Fallback: try matching just the filename
+      if (pageIdx < 0) {
+        var fileName = filePart.split('/').pop();
+        pageIdx = state.pages.findIndex(function(p) { return p.path.split('/').pop() === fileName; });
+      }
       if (pageIdx >= 0) {
-        return '<a href="javascript:void(0)" onclick="loadPage(' + pageIdx + ')"' + titleAttr + '>' + text + '</a>';
+        var sectionArg = '';
+        if (fragment) {
+          var sectionId = fragment.toLowerCase().replace(/[^\w]+/g, '-').replace(/^-|-$/g, '');
+          sectionArg = ',\'' + sectionId + '\'';
+        }
+        return '<a href="javascript:void(0)" onclick="loadPage(' + pageIdx + sectionArg + ')"' + titleAttr + '>' + text + '</a>';
       }
     }
     if (href && href.startsWith('#')) {
