@@ -475,8 +475,8 @@ generate_llms_txt() {
 
     # Extract H1 title
     local title
-    title="$(echo "$content" | grep -m1 '^# ' | sed 's/^# //')"
-    [[ -z "$title" ]] && title="$(echo "$relpath" | sed 's/\.[^.]*$//; s/[-_]/ /g; s/[0-9]*-//')"
+    title="$(grep -m1 '^# ' <<< "$content" | sed 's/^# //')"
+    [[ -z "$title" ]] && title="$(sed 's/\.[^.]*$//; s/[-_]/ /g; s/[0-9]*-//' <<< "$relpath")"
 
     # Extract first paragraph for summary
     local summary=""
@@ -801,18 +801,29 @@ cmd_build() {
     sed -i.bak "s|<!-- __SOCIAL_ICONS__ -->||g" "$tmpfile"
   fi
 
-  # Config JS — use a Python one-liner for safe replacement (avoids sed escaping nightmare)
-  python3 -c "
+  # Config JS — use temp files to avoid ARG_MAX limit with large pre-baked content
+  local _mf_cfg _mf_pre _mf_py
+  _mf_cfg=$(mktemp)
+  _mf_pre=$(mktemp)
+  _mf_py=$(mktemp)
+  printf '%s' "$config_js" > "$_mf_cfg"
+  printf '%s' "$content_js" > "$_mf_pre"
+  cat > "$_mf_py" << 'PYEOF'
 import sys
-with open('$tmpfile', 'r') as f:
+tmpfile, cfg_path, pre_path = sys.argv[1], sys.argv[2], sys.argv[3]
+with open(tmpfile, 'r') as f:
     content = f.read()
-config = '''$config_js'''
+with open(cfg_path, 'r') as f:
+    config = f.read()
 content = content.replace('/* __MARKFLOW_CONFIG_PLACEHOLDER__ */ null', config.strip())
-prebake = '''$content_js'''
+with open(pre_path, 'r') as f:
+    prebake = f.read()
 content = content.replace('/* __MARKFLOW_CONTENT_PLACEHOLDER__ */ null', prebake.strip())
-with open('$tmpfile', 'w') as f:
+with open(tmpfile, 'w') as f:
     f.write(content)
-"
+PYEOF
+  python3 "$_mf_py" "$tmpfile" "$_mf_cfg" "$_mf_pre"
+  rm -f "$_mf_cfg" "$_mf_pre" "$_mf_py"
 
   # Copy to output
   cp "$tmpfile" "${output_dir}/index.html"
