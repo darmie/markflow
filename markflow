@@ -115,6 +115,13 @@ MARKFLOW_TEXT_SECONDARY=#9a9aab
 MARKFLOW_TEXT_MUTED=#5e5e72
 MARKFLOW_BORDER=#2a2a35
 MARKFLOW_CODE_BG=#0d0d12
+MARKFLOW_CODE_INLINE_BG=
+MARKFLOW_CODE_INLINE_COLOR=
+MARKFLOW_BG_HOVER=
+MARKFLOW_ACCENT_GLOW=
+MARKFLOW_HEADER_BG=
+MARKFLOW_FOOTER_BG=
+MARKFLOW_BORDER_ACTIVE=
 
 # Social Links (leave blank to hide)
 MARKFLOW_SOCIAL_GITHUB=
@@ -229,6 +236,13 @@ build_theme_css() {
   [[ -n "${MARKFLOW_TEXT_MUTED:-}" ]] && css_vars="${css_vars}--text-muted:${MARKFLOW_TEXT_MUTED};"
   [[ -n "${MARKFLOW_BORDER:-}" ]] && css_vars="${css_vars}--border:${MARKFLOW_BORDER};"
   [[ -n "${MARKFLOW_CODE_BG:-}" ]] && css_vars="${css_vars}--code-bg:${MARKFLOW_CODE_BG};"
+  [[ -n "${MARKFLOW_CODE_INLINE_BG:-}" ]] && css_vars="${css_vars}--code-inline-bg:${MARKFLOW_CODE_INLINE_BG};"
+  [[ -n "${MARKFLOW_CODE_INLINE_COLOR:-}" ]] && css_vars="${css_vars}--code-inline-color:${MARKFLOW_CODE_INLINE_COLOR};"
+  [[ -n "${MARKFLOW_BG_HOVER:-}" ]] && css_vars="${css_vars}--bg-hover:${MARKFLOW_BG_HOVER};"
+  [[ -n "${MARKFLOW_ACCENT_GLOW:-}" ]] && css_vars="${css_vars}--accent-glow:${MARKFLOW_ACCENT_GLOW};"
+  [[ -n "${MARKFLOW_HEADER_BG:-}" ]] && css_vars="${css_vars}--header-bg:${MARKFLOW_HEADER_BG};"
+  [[ -n "${MARKFLOW_FOOTER_BG:-}" ]] && css_vars="${css_vars}--footer-bg:${MARKFLOW_FOOTER_BG};"
+  [[ -n "${MARKFLOW_BORDER_ACTIVE:-}" ]] && css_vars="${css_vars}--border-active:${MARKFLOW_BORDER_ACTIVE};"
 
   if [[ -n "$css_vars" ]]; then
     echo "<style>:root{${css_vars}}</style>"
