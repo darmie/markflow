@@ -103,6 +103,10 @@ MARKFLOW_BRANCH_SWITCHER=true
 MARKFLOW_BRAND_NAME=
 MARKFLOW_BRAND_LOGO=
 
+# Custom Font (optional — Google Fonts URL + font-family name)
+MARKFLOW_FONT_URL=
+MARKFLOW_FONT_FAMILY=
+
 # Theme Colors
 MARKFLOW_ACCENT=#c4956a
 MARKFLOW_ACCENT_DIM=#9a7554
@@ -117,6 +121,7 @@ MARKFLOW_BORDER=#2a2a35
 MARKFLOW_CODE_BG=#0d0d12
 MARKFLOW_CODE_INLINE_BG=
 MARKFLOW_CODE_INLINE_COLOR=
+MARKFLOW_CODE_TEXT=
 MARKFLOW_BG_HOVER=
 MARKFLOW_ACCENT_GLOW=
 MARKFLOW_HEADER_BG=
@@ -243,9 +248,18 @@ build_theme_css() {
   [[ -n "${MARKFLOW_HEADER_BG:-}" ]] && css_vars="${css_vars}--header-bg:${MARKFLOW_HEADER_BG};"
   [[ -n "${MARKFLOW_FOOTER_BG:-}" ]] && css_vars="${css_vars}--footer-bg:${MARKFLOW_FOOTER_BG};"
   [[ -n "${MARKFLOW_BORDER_ACTIVE:-}" ]] && css_vars="${css_vars}--border-active:${MARKFLOW_BORDER_ACTIVE};"
+  [[ -n "${MARKFLOW_FONT_FAMILY:-}" ]] && css_vars="${css_vars}--font-family:${MARKFLOW_FONT_FAMILY};"
+  [[ -n "${MARKFLOW_CODE_TEXT:-}" ]] && css_vars="${css_vars}--code-text:${MARKFLOW_CODE_TEXT};"
 
   if [[ -n "$css_vars" ]]; then
     echo "<style>:root{${css_vars}}</style>"
+  fi
+}
+
+# ─── BUILD FONT LINK ───
+build_font_link() {
+  if [[ -n "${MARKFLOW_FONT_URL:-}" ]]; then
+    echo "<link href=\"${MARKFLOW_FONT_URL}\" rel=\"stylesheet\">"
   fi
 }
 
@@ -721,7 +735,12 @@ cmd_build() {
   local brand_logo
   brand_logo="$(build_brand_logo)"
 
-  local brand_name="${MARKFLOW_BRAND_NAME:-${MARKFLOW_REPO_NAME:-Markflow}}"
+  local font_link
+  font_link="$(build_font_link)"
+
+  # MARKFLOW_BRAND_NAME explicitly set (even empty) = use as-is (e.g. logo-only)
+  # MARKFLOW_BRAND_NAME unset = fallback to repo name
+  local brand_name="${MARKFLOW_BRAND_NAME-${MARKFLOW_REPO_NAME:-Markflow}}"
 
   local page_title="${MARKFLOW_BRAND_NAME:-${MARKFLOW_REPO_NAME:-Markflow}}"
 
@@ -805,6 +824,15 @@ cmd_build() {
 
   # Brand name
   sed -i.bak "s|<!-- __BRAND_NAME__ -->|${brand_name}|g" "$tmpfile"
+
+  # Custom font
+  if [[ -n "$font_link" ]]; then
+    local escaped_font
+    escaped_font="$(echo "$font_link" | sed 's/[&/\]/\\&/g' | tr -d '\n')"
+    sed -i.bak "s|<!-- __FONT_LINK__ -->|${escaped_font}|g" "$tmpfile"
+  else
+    sed -i.bak "s|<!-- __FONT_LINK__ -->||g" "$tmpfile"
+  fi
 
   # Social icons
   if [[ -n "$social_html" ]]; then
